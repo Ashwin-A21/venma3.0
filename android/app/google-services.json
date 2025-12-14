@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "69387754552",
+    "project_id": "venma-67445",
+    "storage_bucket": "venma-67445.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:69387754552:android:5c380635ddcd15b625dacd",
+        "android_client_info": {
+          "package_name": "com.Qdla.venma"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "69387754552-qd0rt0c93chaq6ce3pfk0njp0h902r2q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Qdla.venma",
+            "certificate_hash": "46c1de0a8bc2d429dcf24655e8807220b475bcdf"
+          }
+        },
+        {
+          "client_id": "69387754552-carq6km7odfs1a3lono5g7chjvsqj7f2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFugjxpMpsYuhGY7L8lYDoPYx70YurQPo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "69387754552-carq6km7odfs1a3lono5g7chjvsqj7f2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
