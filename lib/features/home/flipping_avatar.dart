@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttermoji/fluttermoji.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -127,19 +126,26 @@ class _FlippingAvatarState extends State<FlippingAvatar> {
       ),
       child: ClipOval(
         child: _hasValidImageUrl
-            ? CachedNetworkImage(
-                imageUrl: widget.imageUrl,
+            ? Image.network(
+                widget.imageUrl,
                 fit: BoxFit.cover,
                 width: widget.radius * 2,
                 height: widget.radius * 2,
-                memCacheWidth: (widget.radius * 2 * 3).toInt(),
-                placeholder: (context, url) => Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                ),
-                errorWidget: (context, url, error) {
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
                   debugPrint("Avatar Load Error: $error");
+                  // Mark as error after first failure
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted && !_imageLoadError) {
                       setState(() => _imageLoadError = true);

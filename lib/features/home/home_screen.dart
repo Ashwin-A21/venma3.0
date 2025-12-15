@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/supabase_service.dart';
 import '../onboarding/search_user_screen.dart';
@@ -775,8 +774,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
       child: CircleAvatar(
         radius: 25,
         backgroundColor: Colors.grey[900],
-        backgroundImage: CachedNetworkImageProvider(imageUrl),
-        onBackgroundImageError: (_, __) {}, 
+        backgroundImage: NetworkImage(imageUrl),
+        onBackgroundImageError: (_, __) {}, // Handle error silently, main avatar handles flipping
         child: null,
       ),
     );

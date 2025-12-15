@@ -27,16 +27,4 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-
-  static Color getTextPrimary(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? Colors.white 
-        : textPrimary;
-  }
-
-  static Color getTextSecondary(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? Colors.grey[400]! 
-        : textSecondary;
-  }
 }
