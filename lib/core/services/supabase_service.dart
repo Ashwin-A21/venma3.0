@@ -114,6 +114,18 @@ class SupabaseService {
     await client.from('friendships').delete().eq('id', friendshipId);
   }
 
+  /// Delete an active friendship (unfriend)
+  static Future<void> deleteFriendship(String friendshipId) async {
+    // First delete all messages in this friendship
+    await client.from('messages').delete().eq('friendship_id', friendshipId);
+    
+    // Then delete chat settings
+    await client.from('chat_settings').delete().eq('friendship_id', friendshipId);
+    
+    // Finally delete the friendship
+    await client.from('friendships').delete().eq('id', friendshipId);
+  }
+
   static Future<void> sendNudge(String friendshipId) async {
     final userId = currentUser!.id;
     await client.from('messages').insert({

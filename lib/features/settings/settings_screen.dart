@@ -63,7 +63,21 @@ class SettingsScreen extends StatelessWidget {
           
           const SizedBox(height: 24),
           
-          // Danger Zone
+          // Friendship Section
+          _buildSectionHeader(context, "Friendship"),
+          const SizedBox(height: 8),
+          _buildSettingsTile(
+            context: context,
+            icon: Icons.person_remove,
+            iconColor: Colors.orange,
+            title: "Unfriend",
+            subtitle: "End your current friendship",
+            onTap: () => _showUnfriendDialog(context),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Account Actions
           _buildSectionHeader(context, "Account Actions"),
           const SizedBox(height: 8),
           _buildSettingsTile(
@@ -72,37 +86,87 @@ class SettingsScreen extends StatelessWidget {
             iconColor: Colors.red,
             title: "Sign Out",
             subtitle: "Log out of your account",
-            onTap: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Sign Out"),
-                  content: const Text("Are you sure you want to sign out?"),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text("Cancel"),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text("Sign Out"),
-                    ),
-                  ],
-                ),
-              );
-              
-              if (confirm == true && context.mounted) {
-                await SupabaseService.signOut();
-                if (context.mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              }
-            },
+            onTap: () => _showSignOutDialog(context),
           ),
         ],
       ),
     );
+  }
+  
+  Future<void> _showUnfriendDialog(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("End Friendship"),
+        content: const Text(
+          "Are you sure you want to unfriend? This will delete all your "
+          "messages and you'll need to find a new friend to continue using Venma."
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Unfriend"),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true && context.mounted) {
+      try {
+        // Get active friendship and delete it
+        final friendshipId = await SupabaseService.getActiveFriendshipId();
+        if (friendshipId != null) {
+          await SupabaseService.deleteFriendship(friendshipId);
+          
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Friendship ended")),
+            );
+            // Navigate back to root to refresh
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error: ${e.toString()}")),
+          );
+        }
+      }
+    }
+  }
+  
+  Future<void> _showSignOutDialog(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Sign Out"),
+        content: const Text("Are you sure you want to sign out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Sign Out"),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true && context.mounted) {
+      await SupabaseService.signOut();
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    }
   }
   
   Widget _buildSectionHeader(BuildContext context, String title) {

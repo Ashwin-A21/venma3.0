@@ -99,6 +99,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: true, // Ensure keyboard doesn't cover input
       appBar: AppBar(
         title: Row(
           children: [
@@ -124,41 +125,44 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _friendshipId == null
-                ? const Center(child: CircularProgressIndicator())
-                : StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: SupabaseService.client
-                        .from('messages')
-                        .stream(primaryKey: ['id'])
-                        .eq('friendship_id', _friendshipId!)
-                        .order('created_at')
-                        .map((maps) => maps),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final messages = snapshot.data!
-                          .where((m) => _shouldShowMessage(m))
-                          .toList();
-                      messages.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
-                      
-                      return ListView.builder(
-                        reverse: true,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = messages[index];
-                          return _buildMessageBubble(msg, msg['sender_id'] == myId);
-                        },
-                      );
-                    },
-                  ),
-          ),
-          _buildInputArea(),
-        ],
+      body: SafeArea(
+        bottom: false, // Allow input to sit above the system nav bar
+        child: Column(
+          children: [
+            Expanded(
+              child: _friendshipId == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: SupabaseService.client
+                          .from('messages')
+                          .stream(primaryKey: ['id'])
+                          .eq('friendship_id', _friendshipId!)
+                          .order('created_at')
+                          .map((maps) => maps),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final messages = snapshot.data!
+                            .where((m) => _shouldShowMessage(m))
+                            .toList();
+                        messages.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+                        
+                        return ListView.builder(
+                          reverse: true,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = messages[index];
+                            return _buildMessageBubble(msg, msg['sender_id'] == myId);
+                          },
+                        );
+                      },
+                    ),
+            ),
+            _buildInputArea(),
+          ],
+        ),
       ),
     );
   }

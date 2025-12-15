@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:video_player/video_player.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/supabase_service.dart';
 
@@ -68,12 +69,19 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
   int _currentIndex = 0;
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  
+  // Video player for video statuses
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  
+  // Default duration for images/text
+  static const Duration _defaultDuration = Duration(seconds: 5);
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _animController = AnimationController(vsync: this, duration: const Duration(seconds: 5));
+    _animController = AnimationController(vsync: this, duration: _defaultDuration);
     
     _animController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -84,15 +92,58 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
         _animController.stop();
+        _videoController?.pause();
       } else {
         _animController.forward();
+        _videoController?.play();
       }
     });
 
-    _startStory();
+    _loadCurrentStory();
   }
 
-  void _startStory() {
+  Future<void> _loadCurrentStory() async {
+    final currentStatus = widget.statuses[_currentIndex];
+    final type = currentStatus['type'];
+    final contentUrl = currentStatus['content_url'];
+    
+    // Dispose previous video controller
+    await _videoController?.dispose();
+    _videoController = null;
+    _isVideoInitialized = false;
+    
+    if (type == 'video' && contentUrl != null) {
+      // Load video and get its duration
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(contentUrl));
+      
+      try {
+        await _videoController!.initialize();
+        
+        if (mounted) {
+          setState(() => _isVideoInitialized = true);
+          
+          // Set animation duration to video duration
+          final videoDuration = _videoController!.value.duration;
+          _animController.duration = videoDuration;
+          
+          // Start playing
+          _animController.reset();
+          _animController.forward();
+          _videoController!.play();
+        }
+      } catch (e) {
+        debugPrint("Error initializing video: $e");
+        // Fall back to default duration
+        _startWithDefaultDuration();
+      }
+    } else {
+      // Image or text - use default 5 second duration
+      _startWithDefaultDuration();
+    }
+  }
+  
+  void _startWithDefaultDuration() {
+    _animController.duration = _defaultDuration;
     _animController.reset();
     _animController.forward();
   }
@@ -103,7 +154,7 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
         _currentIndex++;
       });
       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      _startStory();
+      _loadCurrentStory();
     } else {
       Navigator.pop(context);
     }
@@ -115,8 +166,18 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
         _currentIndex--;
       });
       _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      _startStory();
+      _loadCurrentStory();
     }
+  }
+  
+  void _pauseStory() {
+    _animController.stop();
+    _videoController?.pause();
+  }
+  
+  void _resumeStory() {
+    _animController.forward();
+    _videoController?.play();
   }
 
   Future<void> _sendReply() async {
@@ -124,9 +185,6 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
     if (text.isEmpty) return;
     
     final currentStatus = widget.statuses[_currentIndex];
-    // We need to send a message to the user who owns the status
-    // First, find or create friendship? Assuming we are friends if we see status.
-    // We need the friendship ID between me and status owner.
     
     try {
         final statusOwnerId = currentStatus['user_id'];
@@ -161,14 +219,6 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
   }
 
   Future<void> _likeStatus() async {
-     // For now, let's just show a visual cue or send a "Liked your status" message?
-     // Or we can add a 'likes' table. The user asked to "like it".
-     // Simplest robust way is a message or just local animation if no backend support yet.
-     // But let's verify if we can add a like.
-     // Let's send a "Liked your status" message for now as a fallback if no column.
-     // Or better, let's assume we can add a 'likes' array to statuses if we could migrate.
-     // Given constraints, sending a "❤️ Liked your status" message is safe and immediate.
-     
      final currentStatus = widget.statuses[_currentIndex];
      try {
         final statusOwnerId = currentStatus['user_id'];
@@ -186,7 +236,7 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
               'friendship_id': friendshipId,
               'sender_id': myId,
               'content': "❤️ Liked your status",
-              'type': 'text', // or nudge?
+              'type': 'text',
             });
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Liked!")));
          }
@@ -201,6 +251,7 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
     _animController.dispose();
     _replyController.dispose();
     _focusNode.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -212,46 +263,40 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
     final type = currentStatus['type'];
     final contentUrl = currentStatus['content_url'];
     final contentText = currentStatus['content_text'];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
+        // Fixed tap zones: Left 20% = prev, Right 20% = next, Center = nothing
         onTapUp: (details) {
-          final width = MediaQuery.of(context).size.width;
-          if (details.globalPosition.dy > MediaQuery.of(context).size.height - 150) {
-              // Ignore tap on input area
-              return;
+          // Ignore taps on input area
+          if (details.globalPosition.dy > screenHeight - 150) {
+            return;
           }
-          if (details.globalPosition.dx < width / 3) {
+          
+          final tapX = details.globalPosition.dx;
+          if (tapX < screenWidth * 0.2) {
+            // Left 20% - previous
             _prevStory();
-          } else {
+          } else if (tapX > screenWidth * 0.8) {
+            // Right 20% - next
             _nextStory();
           }
+          // Center 60% - do nothing (or could show UI)
         },
-        onLongPress: () => _animController.stop(),
-        onLongPressUp: () => _animController.forward(),
+        onLongPress: _pauseStory,
+        onLongPressUp: _resumeStory,
         child: Stack(
           children: [
             // Content
             Center(
-              child: type == 'image' && contentUrl != null
-                  ? Image.network(contentUrl, fit: BoxFit.contain)
-                  : type == 'video' && contentUrl != null
-                      ? const Icon(Icons.videocam, size: 100, color: Colors.white)
-                      : Container(
-                          color: Colors.purple,
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.all(20),
-                          child: Text(
-                            contentText ?? "",
-                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+              child: _buildContent(type, contentUrl, contentText),
             ),
             
             // Caption
-            if (type != 'text' && contentText != null)
+            if (type != 'text' && contentText != null && contentText.toString().isNotEmpty)
               Positioned(
                 bottom: 100,
                 left: 0,
@@ -272,23 +317,28 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
               top: 40,
               left: 10,
               right: 10,
-              child: Row(
-                children: List.generate(widget.statuses.length, (index) {
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: LinearProgressIndicator(
-                        value: index < _currentIndex
-                            ? 1.0
-                            : index == _currentIndex
-                                ? _animController.value
-                                : 0.0,
-                        backgroundColor: Colors.white24,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    ),
+              child: AnimatedBuilder(
+                animation: _animController,
+                builder: (context, child) {
+                  return Row(
+                    children: List.generate(widget.statuses.length, (index) {
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: LinearProgressIndicator(
+                            value: index < _currentIndex
+                                ? 1.0
+                                : index == _currentIndex
+                                    ? _animController.value
+                                    : 0.0,
+                            backgroundColor: Colors.white24,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      );
+                    }),
                   );
-                }),
+                },
               ),
             ),
 
@@ -308,6 +358,16 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ],
+              ),
+            ),
+            
+            // Close button
+            Positioned(
+              top: 60,
+              right: 20,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
               ),
             ),
             
@@ -353,5 +413,39 @@ class _StoryViewScreenState extends State<StoryViewScreen> with SingleTickerProv
         ),
       ),
     );
+  }
+  
+  Widget _buildContent(String? type, String? contentUrl, String? contentText) {
+    if (type == 'video' && contentUrl != null) {
+      if (_isVideoInitialized && _videoController != null) {
+        return AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
+        );
+      } else {
+        return const CircularProgressIndicator(color: Colors.white);
+      }
+    } else if (type == 'image' && contentUrl != null) {
+      return Image.network(
+        contentUrl, 
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const CircularProgressIndicator(color: Colors.white);
+        },
+      );
+    } else {
+      // Text status
+      return Container(
+        color: Colors.purple,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(20),
+        child: Text(
+          contentText ?? "",
+          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
   }
 }
