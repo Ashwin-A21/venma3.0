@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../core/extensions/color_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -483,7 +484,7 @@ class _CallScreenState extends State<CallScreen> {
           ? Image.network(
               widget.friendAvatar,
               fit: BoxFit.cover,
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withOpacityValue(0.7),
               colorBlendMode: BlendMode.darken,
               errorBuilder: (context, error, stackTrace) {
                 return Container(color: Colors.black54);
@@ -515,7 +516,7 @@ class _CallScreenState extends State<CallScreen> {
       ),
     ).animate(
       onPlay: (controller) => _status == "Calling..." ? controller.repeat() : controller.stop()
-    ).shimmer(duration: 2000.ms, color: AppColors.primary.withOpacity(0.5));
+    ).shimmer(duration: 2000.ms, color: AppColors.primary.withOpacityValue(0.5));
   }
 
   Widget _buildActionButton(IconData icon, Color iconColor, Color bgColor, VoidCallback onTap) {

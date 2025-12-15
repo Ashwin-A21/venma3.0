@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/extensions/color_extensions.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -38,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
               onChanged: (value) {
                 themeProvider.toggleTheme();
               },
-              activeTrackColor: AppColors.primary.withOpacity(0.5),
+              activeTrackColor: AppColors.primary.withOpacityValue(0.5),
               activeThumbColor: AppColors.primary,
             ),
             onTap: () => themeProvider.toggleTheme(),
@@ -113,7 +114,7 @@ class SettingsScreen extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacityValue(0.6),
           letterSpacing: 1.2,
         ),
       ),
@@ -135,14 +136,14 @@ class SettingsScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          color: Theme.of(context).dividerColor.withOpacityValue(0.1),
         ),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withOpacityValue(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 24),
@@ -162,7 +163,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         trailing: trailing ?? Icon(
           Icons.chevron_right,
-          color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+          color: Theme.of(context).iconTheme.color?.withOpacityValue(0.5),
         ),
         onTap: onTap,
       ),

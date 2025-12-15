@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/extensions/color_extensions.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import 'friend_selection_screen.dart';
@@ -97,7 +98,7 @@ class OnboardingScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
+          color: isActive ? AppColors.primary.withOpacityValue(0.1) : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive ? AppColors.primary : Colors.transparent,
