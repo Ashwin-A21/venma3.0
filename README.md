@@ -1,49 +1,82 @@
-# Venma (Version 1)
+# Venma
 
-A deeply personal social app designed for close friends.
+A Flutter-based social messaging application with real-time chat, voice/video calls, and status updates.
 
-## Features
+## Overview
 
-- **Version Selection**: Choose your Venma experience (Currently Version 1 is active).
-- **Friend Selection**: Integrate with contacts to invite or add friends.
-- **Home Dashboard**:
-  - Friend Status (Duration pill).
-  - Communication Actions (Call, Video, Nudge/Pinch).
-  - Chat Preview with Stickers.
-  - Story & Game Footer (Flash Fury).
-- **Chat Interface**:
-  - Message bubbles with gradient backgrounds.
-  - Mymoji and attachment options.
-- **Profile Module**:
-  - User and Friend profiles.
-  - Custom tabs for details (Venma ID, Age, etc.).
-  - Atman currency display.
-- **Camera Module**:
-  - Integrated camera preview.
-  - Swipe access from Home.
+Venma is an Android application built with Flutter that provides:
+- Real-time messaging with Supabase backend
+- Voice and video calling via WebRTC
+- Status updates (photos, videos)
+- User profiles with customizable avatars
+- Contact integration
+- Notifications
 
-## Getting Started
+## Package Information
 
-1.  **Install Dependencies**:
-    ```bash
-    flutter pub get
-    ```
+- **Package Name**: `com.venma.app`
+- **App Name**: `venma`
+- **Version**: `1.0.0+1`
+- **Platform**: Android only
 
-2.  **Run the App**:
-    ```bash
-    flutter run
-    ```
+## Build Configuration
 
-## Permissions
+### Requirements
+- Flutter SDK 3.10.0 or higher
+- Android SDK with minimum API level 24 (Android 7.0)
+- Target SDK: Latest Flutter default
 
-The app requires the following permissions (already added to `AndroidManifest.xml`):
-- Internet
-- Contacts (Read/Write)
-- Camera
-- Microphone
+### Building
 
-## Note
+Clean and rebuild:
+```bash
+flutter clean
+flutter pub get
+flutter build apk --release
+```
 
-- This is a frontend implementation with mock data.
-- Backend integration (Supabase/Firebase) is needed for real-time features.
-- "Mymoji" and "Stickers" are currently placeholders.
+For debug build:
+```bash
+flutter build apk --debug
+```
+
+## Project Structure
+
+This is an **Android-only** Flutter project. All iOS, web, Windows, Linux, and macOS platform folders have been removed to optimize the project size and focus on Android development.
+
+### Key Directories
+- `android/` - Android platform-specific code
+- `lib/` - Dart application code
+- `lib/core/` - Core utilities and constants
+- `lib/features/` - Feature-specific modules
+- `lib/services/` - Backend services and APIs
+
+## Dependencies
+
+Key dependencies include:
+- `supabase_flutter` - Backend and real-time database
+- `google_sign_in` - Google authentication
+- `flutter_webrtc` - Voice/video calling
+- `camera` - Camera access for photos/videos
+- `flutter_local_notifications` - Push notifications
+- `fluttermoji` - Avatar customization
+- `provider` - State management
+
+## Development Notes
+
+- The project uses Kotlin for Android-specific code
+- Core library desugaring is enabled for Java 8+ API support
+- Package structure: `com.venma.app`
+- Debug signing is used for release builds (update before production deployment)
+
+## Next Steps
+
+1. Set up proper signing configuration for release builds
+2. Configure Firebase (if using for notifications)
+3. Update Supabase credentials in the app
+4. Test all features on physical devices
+5. Generate a proper release keystore
+
+## License
+
+Private project - All rights reserved

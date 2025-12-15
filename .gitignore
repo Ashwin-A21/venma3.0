@@ -18,14 +18,11 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code
 .vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
-**/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -42,34 +39,34 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/build/
+/android/.gradle/
+/android/local.properties
+/android/captures/
+/android/*.iml
 
 # Gradle
-.gradle
-/android/.gradle
-/android/local.properties
+.gradle/
 
-# iOS
-/ios/.generated/
-/ios/Flutter/App.framework
-/ios/Flutter/Flutter.framework
-/ios/Flutter/Generated.xcconfig
-/ios/Flutter/app.flx
-/ios/Flutter/app.zip
-/ios/ServiceDefinitions.json
-/ios/Runner/GeneratedPluginRegistrant.*
-/ios/Pods/
-/ios/.symlinks/
-/ios/Profile/
-/ios/Release/
-
-# Exceptions to above rules.
-!/android/app/src/main/AndroidManifest.xml
-!/ios/Runner.xcodeproj/project.pbxproj
-
-# Local configuration file (secrets)
+# Local configuration
 .env
 
+# Documentation and SQL files (moved to docs folder)
+*.sql
+*_SETUP.md
+BACKEND_SETUP.md
+SETUP_INSTRUCTIONS.md
+
+# Platform folders (Android only project)
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+# Test folder (if not used)
+/test/
