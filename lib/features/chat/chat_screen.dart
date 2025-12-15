@@ -181,25 +181,40 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    
+    // Clear immediately for faster UX
     _controller.clear();
     
+    // Get friendship ID (cached after first fetch)
+    final friendshipId = _friendshipId ?? await SupabaseService.getActiveFriendshipId();
+    if (friendshipId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No active friendship found.")),
+        );
+      }
+      return;
+    }
+    
+    if (_friendshipId == null && mounted) {
+      setState(() => _friendshipId = friendshipId);
+    }
+    
+    // Fire and forget - don't await for faster UX
+    // Message will appear via StreamBuilder when inserted
+    _insertMessage(friendshipId, text);
+  }
+  
+  // Separate async method to avoid blocking UI
+  Future<void> _insertMessage(String friendshipId, String text) async {
     try {
-      String? friendshipId = _friendshipId ?? await SupabaseService.getActiveFriendshipId();
-      if (friendshipId == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("No active friendship found.")),
-          );
-        }
-        return;
+      // Get expiry time in parallel (non-blocking)
+      DateTime? expiresAt;
+      try {
+        expiresAt = await SupabaseService.getMessageExpiryTime(friendshipId);
+      } catch (_) {
+        // Ignore expiry errors - send without expiry
       }
-      
-      if (_friendshipId == null && mounted) {
-        setState(() => _friendshipId = friendshipId);
-      }
-      
-      // Get expiry time based on chat settings
-      final expiresAt = await SupabaseService.getMessageExpiryTime(friendshipId);
       
       await SupabaseService.client.from('messages').insert({
         'friendship_id': friendshipId,
@@ -209,7 +224,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'expires_at': expiresAt?.toIso8601String(),
       });
     } catch (e) {
-      debugPrint("Error sending: $e");
+      debugPrint("Error sending message: $e");
+      // Show error only if still mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to send message: ${e.toString().split(':').last.trim()}"),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     }
   }
 
@@ -383,26 +407,50 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTextMessage(String content, bool isMe, String time) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
       decoration: BoxDecoration(
-        gradient: isMe ? AppColors.primaryGradient : null,
-        color: isMe ? null : Theme.of(context).cardColor,
+        gradient: isMe ? (isDark ? AppColors.darkPrimaryGradient : AppColors.primaryGradient) : null,
+        color: isMe ? null : AppColors.getMessageBubbleColor(context, false),
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(20),
           topRight: const Radius.circular(20),
-          bottomLeft: isMe ? const Radius.circular(20) : Radius.zero,
-          bottomRight: isMe ? Radius.zero : const Radius.circular(20),
+          bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
+          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isMe 
+                ? AppColors.primary.withOpacity(0.3)
+                : Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(content, style: TextStyle(color: isMe ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color, fontSize: 16)),
+          Text(
+            content, 
+            style: TextStyle(
+              color: AppColors.getMessageTextColor(context, isMe),
+              fontSize: 15,
+              height: 1.4,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(time, style: TextStyle(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10)),
+          Text(
+            time, 
+            style: TextStyle(
+              color: AppColors.getMessageTimeColor(context, isMe),
+              fontSize: 11,
+            ),
+          ),
         ],
       ),
     );
@@ -667,40 +715,112 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildInputArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      color: Theme.of(context).cardColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: SafeArea(
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.add_circle, color: AppColors.primary),
-              onPressed: _showAttachmentMenu,
+            // Attachment button
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.add, color: AppColors.primary),
+                onPressed: _showAttachmentMenu,
+                splashRadius: 24,
+              ),
             ),
+            const SizedBox(width: 8),
+            // Message input field
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: TextField(
-                  controller: _controller,
-                  onSubmitted: (_) => _sendMessage(),
-                  decoration: const InputDecoration(
-                    hintText: "Message...",
-                    border: InputBorder.none,
+                  color: AppColors.getInputBackground(context),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.getInputBorder(context),
+                    width: 1,
                   ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        onSubmitted: (_) => _sendMessage(),
+                        textInputAction: TextInputAction.send,
+                        maxLines: 4,
+                        minLines: 1,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Type a message...",
+                          hintStyle: TextStyle(
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                            fontSize: 16,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.camera_alt, color: Colors.grey),
-              onPressed: () => _pickMedia('image', false),
+            const SizedBox(width: 8),
+            // Camera button
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkCard : Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: Icon(
+                  Icons.camera_alt_rounded,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                ),
+                onPressed: () => _pickMedia('image', false),
+                splashRadius: 24,
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.send, color: AppColors.primary),
-              onPressed: _sendMessage,
+            const SizedBox(width: 4),
+            // Send button with gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                onPressed: _sendMessage,
+                splashRadius: 24,
+              ),
             ),
           ],
         ),

@@ -4,15 +4,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/theme_provider.dart';
+import 'core/services/notification_service.dart';
 import 'features/onboarding/auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Supabase
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
   );
+
+  // Initialize Notifications
+  await NotificationService().initialize();
 
   runApp(const VenmaApp());
 }
@@ -41,4 +46,3 @@ class VenmaApp extends StatelessWidget {
     );
   }
 }
-

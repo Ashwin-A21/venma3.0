@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/notification_service.dart';
 import '../onboarding/search_user_screen.dart';
 import '../profile/user_profile_screen.dart';
 import '../chat/chat_screen.dart';
@@ -15,7 +16,6 @@ import 'status_list_screen.dart';
 import 'story_view_screen.dart';
 import 'flipping_avatar.dart';
 import 'package:vibration/vibration.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,21 +31,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   StreamSubscription? _callSubscription;
   StreamSubscription? _messageSubscription;
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
     super.initState();
     _checkFriendshipStatus();
-    _checkFriendshipStatus();
     _listenForCalls();
-    _initNotifications();
-  }
-
-  Future<void> _initNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidSettings);
-    await _notificationsPlugin.initialize(initSettings);
   }
 
   void _listenForMessages(String friendshipId) {
@@ -65,28 +57,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
             if (isNotMe && isRecent) {
               if (msg['type'] == 'nudge') {
-                // Vibration handled in HomeDashboard, but good to have notification too
-                 _showNotification("Nudge!", "Someone sent you a nudge.");
-                 if (await Vibration.hasVibrator() ?? false) {
-                   Vibration.vibrate(pattern: [0, 500, 100, 500]);
-                 }
+                // Show nudge notification with vibration
+                await _notificationService.showNudgeNotification(
+                  senderName: 'Friend',
+                  friendshipId: friendshipId,
+                );
+                if (await Vibration.hasVibrator() ?? false) {
+                  Vibration.vibrate(pattern: [0, 500, 100, 500]);
+                }
               } else {
-                 _showNotification("New Message", msg['content'] ?? "Sent a media file");
+                // Show message notification
+                await _notificationService.showMessageNotification(
+                  senderName: 'Friend',
+                  message: msg['content'] ?? 'Sent a media file',
+                  friendshipId: friendshipId,
+                );
               }
             }
           }
         });
-  }
-
-  Future<void> _showNotification(String title, String body) async {
-    const androidDetails = AndroidNotificationDetails(
-      'channel_id',
-      'Venma Messages',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _notificationsPlugin.show(0, title, body, details);
   }
 
   void _listenForCalls() {
@@ -146,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNoFriendState() {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text("Welcome to Venma")),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: SupabaseService.getPendingRequests(),
@@ -157,9 +146,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   "Venma is for close friends.",
-                  style: TextStyle(fontSize: 20, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 20, 
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
@@ -173,7 +165,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 40),
                 if (requests.isNotEmpty) ...[
-                  const Text("Pending Requests:", style: TextStyle(color: Colors.grey)),
+                  Text(
+                    "Pending Requests:", 
+                    style: TextStyle(color: Theme.of(context).hintColor),
+                  ),
                   const SizedBox(height: 10),
                   ...requests.map((req) => _buildRequestCard(req)),
                 ]
@@ -187,10 +182,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRequestCard(Map<String, dynamic> req) {
     return Card(
-      color: AppColors.surface,
+      color: Theme.of(context).cardColor,
       child: ListTile(
-        title: const Text("New Friend Request", style: TextStyle(color: Colors.white)),
-        subtitle: Text("From User ID: ${req['user_id_1']}", style: const TextStyle(color: Colors.grey)),
+        title: Text(
+          "New Friend Request", 
+          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+        ),
+        subtitle: Text(
+          "From User ID: ${req['user_id_1']}", 
+          style: TextStyle(color: Theme.of(context).hintColor),
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -390,8 +391,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: SafeArea(
         child: Padding(
