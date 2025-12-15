@@ -651,13 +651,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(isDark ? 0.15 : 0.03),
+            blurRadius: 4,
             offset: const Offset(0, -1),
           ),
         ],
@@ -666,51 +666,62 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // Attachment button
             IconButton(
               icon: Icon(
-                Icons.attach_file_rounded,
-                color: isDark ? AppColors.darkTextSecondary : Colors.grey.shade600,
+                Icons.add_circle_outline,
+                color: AppColors.primary,
+                size: 26,
               ),
               onPressed: _showAttachmentMenu,
             ),
+            // Text input field
             Expanded(
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 120),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(24),
+              child: TextField(
+                controller: _controller,
+                onSubmitted: (_) => _sendMessage(),
+                textInputAction: TextInputAction.send,
+                maxLines: 5,
+                minLines: 1,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                 ),
-                child: TextField(
-                  controller: _controller,
-                  onSubmitted: (_) => _sendMessage(),
-                  textInputAction: TextInputAction.send,
-                  maxLines: 5,
-                  minLines: 1,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                decoration: InputDecoration(
+                  hintText: "Type a message...",
+                  hintStyle: TextStyle(
+                    color: isDark ? AppColors.darkTextSecondary : Colors.grey.shade500,
                   ),
-                  decoration: InputDecoration(
-                    hintText: "Message...",
-                    hintStyle: TextStyle(
-                      color: isDark ? AppColors.darkTextSecondary : Colors.grey.shade500,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  filled: true,
+                  fillColor: isDark ? AppColors.darkCard : Colors.grey.shade100,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 6),
-            Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                onPressed: _sendMessage,
+            const SizedBox(width: 8),
+            // Send button
+            Material(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: _sendMessage,
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                ),
               ),
             ),
           ],

@@ -115,15 +115,48 @@ class SupabaseService {
   }
 
   /// Delete an active friendship (unfriend)
+  /// Must delete in correct order to respect foreign key constraints
   static Future<void> deleteFriendship(String friendshipId) async {
-    // First delete all messages in this friendship
-    await client.from('messages').delete().eq('friendship_id', friendshipId);
-    
-    // Then delete chat settings
-    await client.from('chat_settings').delete().eq('friendship_id', friendshipId);
-    
-    // Finally delete the friendship
-    await client.from('friendships').delete().eq('id', friendshipId);
+    try {
+      // 1. First delete call signals (references calls)
+      try {
+        final calls = await client.from('calls')
+            .select('id')
+            .or('caller_id.eq.${currentUser!.id},receiver_id.eq.${currentUser!.id}');
+        for (var call in calls) {
+          await client.from('call_signals').delete().eq('call_id', call['id']);
+        }
+      } catch (e) {
+        debugPrint("Error deleting call signals: $e");
+      }
+      
+      // 2. Delete calls
+      try {
+        await client.from('calls').delete().or('caller_id.eq.${currentUser!.id},receiver_id.eq.${currentUser!.id}');
+      } catch (e) {
+        debugPrint("Error deleting calls: $e");
+      }
+      
+      // 3. Delete all messages in this friendship
+      try {
+        await client.from('messages').delete().eq('friendship_id', friendshipId);
+      } catch (e) {
+        debugPrint("Error deleting messages: $e");
+      }
+      
+      // 4. Delete chat settings
+      try {
+        await client.from('chat_settings').delete().eq('friendship_id', friendshipId);
+      } catch (e) {
+        debugPrint("Error deleting chat settings: $e");
+      }
+      
+      // 5. Finally delete the friendship itself
+      await client.from('friendships').delete().eq('id', friendshipId);
+    } catch (e) {
+      debugPrint("Error in deleteFriendship: $e");
+      rethrow;
+    }
   }
 
   static Future<void> sendNudge(String friendshipId) async {
