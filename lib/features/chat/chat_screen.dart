@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/extensions/color_extensions.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -267,7 +266,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacityValue(0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 28),
@@ -423,7 +422,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7, maxHeight: 250),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isMe ? AppColors.primary : Colors.grey.withOpacityValue(0.3)),
+          border: Border.all(color: isMe ? AppColors.primary : Colors.grey.withOpacity(0.3)),
         ),
         child: Stack(
           children: [
@@ -513,7 +512,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
           color: Colors.grey[800],
-          border: Border.all(color: isMe ? AppColors.primary : Colors.grey.withOpacityValue(0.3)),
+          border: Border.all(color: isMe ? AppColors.primary : Colors.grey.withOpacity(0.3)),
         ),
         child: Stack(
           children: [
@@ -578,9 +577,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.all(12),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
         decoration: BoxDecoration(
-          color: isMe ? AppColors.primary.withOpacityValue(0.1) : Theme.of(context).cardColor,
+          color: isMe ? AppColors.primary.withOpacity(0.1) : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isMe ? AppColors.primary : Colors.grey.withOpacityValue(0.3)),
+          border: Border.all(color: isMe ? AppColors.primary : Colors.grey.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -588,7 +587,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacityValue(0.2),
+                color: AppColors.primary.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.insert_drive_file, color: AppColors.primary),

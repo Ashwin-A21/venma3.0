@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/extensions/color_extensions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
@@ -115,8 +114,8 @@ class AppTheme {
           return Colors.grey;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacityValue(0.3);
-          return Colors.grey.withOpacityValue(0.3);
+          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacity(0.3);
+          return Colors.grey.withOpacity(0.3);
         }),
       ),
     );
@@ -216,8 +215,8 @@ class AppTheme {
           return Colors.grey;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacityValue(0.3);
-          return Colors.grey.withOpacityValue(0.3);
+          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacity(0.3);
+          return Colors.grey.withOpacity(0.3);
         }),
       ),
     );

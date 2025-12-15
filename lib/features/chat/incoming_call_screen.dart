@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/extensions/color_extensions.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/supabase_service.dart';
@@ -72,7 +71,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
           Image.network(
             callerAvatar,
             fit: BoxFit.cover,
-            color: Colors.black.withOpacityValue(0.8),
+            color: Colors.black.withOpacity(0.8),
             colorBlendMode: BlendMode.darken,
           ),
           SafeArea(

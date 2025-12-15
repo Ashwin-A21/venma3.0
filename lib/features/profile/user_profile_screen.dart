@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/extensions/color_extensions.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -94,7 +93,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.grey[300],
-        border: Border.all(color: AppColors.primary.withOpacityValue(0.3), width: 2),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
       ),
       child: ClipOval(
         child: hasValidUrl
@@ -259,7 +258,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppColors.primary.withOpacityValue(0.3)),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
               ),
               child: Text(
                 "$balance atman",
@@ -402,7 +401,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacityValue(0.2),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 5,
                   offset: const Offset(0, 2),
                 ),

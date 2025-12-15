@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../../core/extensions/color_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -501,7 +500,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacityValue(0.5)),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
               ),
               child: Text(
                 "$streak 🔥", 
@@ -525,12 +524,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacityValue(0.4),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
             blurRadius: 40,
             spreadRadius: 15,
           ),
           BoxShadow(
-            color: Theme.of(context).colorScheme.tertiary.withOpacityValue(0.2),
+            color: Theme.of(context).colorScheme.tertiary.withOpacity(0.2),
             blurRadius: 60,
             spreadRadius: 20,
           ),
@@ -545,7 +544,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     ).animate()
       .fadeIn(duration: 600.ms)
       .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1), curve: Curves.easeOutBack)
-      .shimmer(delay: 1500.ms, duration: 2500.ms, color: Theme.of(context).colorScheme.primary.withOpacityValue(0.3));
+      .shimmer(delay: 1500.ms, duration: 2500.ms, color: Theme.of(context).colorScheme.primary.withOpacity(0.3));
   }
 
   Widget _buildCommunicationActions(BuildContext context) {
@@ -571,7 +570,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacityValue(0.2),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                   blurRadius: 15,
                   spreadRadius: 2,
                 ),
@@ -622,7 +621,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacityValue(0.5),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
                   blurRadius: 25,
                   spreadRadius: 3,
                 ),
@@ -674,7 +673,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: bubbleColor.withOpacityValue(0.2), // Light background
+                          color: bubbleColor.withOpacity(0.2), // Light background
                           borderRadius: BorderRadius.circular(15),
                           border: Border.all(color: bubbleColor),
                         ),
@@ -694,7 +693,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   decoration: BoxDecoration(
                     color: Colors.black,
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: AppColors.primary.withOpacityValue(0.3)),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                   ),
                   child: const Text(
                     "Besties 20", // Sticker
