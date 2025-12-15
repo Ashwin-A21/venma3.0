@@ -106,10 +106,12 @@ class _StatusListScreenState extends State<StatusListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -117,29 +119,33 @@ class _StatusListScreenState extends State<StatusListScreen> {
     final friendId = _friendProfile?['id'];
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         title: const Text("Status"),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+            icon: const Icon(Icons.add_circle_outline),
             onPressed: _postStatus,
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // My Status Section
-            _buildMyStatusSection(userId),
-            
-            const SizedBox(height: 20),
-            
-            // Friend's Status Section (with day grouping)
-            if (friendId != null) _buildFriendStatusSection(friendId),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _fetchProfiles,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // My Status Section
+              _buildMyStatusSection(userId, isDark),
+              
+              const Divider(height: 1),
+              
+              // Friend's Status Section (with day grouping)
+              if (friendId != null) _buildFriendStatusSection(friendId, isDark),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -150,7 +156,7 @@ class _StatusListScreenState extends State<StatusListScreen> {
     );
   }
 
-  Widget _buildMyStatusSection(String userId) {
+  Widget _buildMyStatusSection(String userId, bool isDark) {
     final avatarUrl = _userProfile?['avatar_url'] ?? "";
     final displayName = _userProfile?['display_name'] ?? "Me";
 
@@ -159,81 +165,71 @@ class _StatusListScreenState extends State<StatusListScreen> {
       builder: (context, snapshot) {
         final myStatuses = snapshot.data ?? [];
         
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                "My Status",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: myStatuses.isNotEmpty ? AppColors.primary : Colors.grey,
+                    width: 2.5,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: Theme.of(context).cardColor,
+                  backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                  child: avatarUrl.isEmpty 
+                      ? Icon(Icons.person, color: Theme.of(context).hintColor) 
+                      : null,
                 ),
               ),
-            ),
-            ListTile(
-              leading: Stack(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: myStatuses.isNotEmpty ? AppColors.primary : Colors.grey,
-                        width: 2,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Colors.grey[800],
-                      backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-                      child: avatarUrl.isEmpty 
-                          ? const Icon(Icons.person, color: Colors.white) 
-                          : null,
-                    ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2),
                   ),
-                  if (myStatuses.isEmpty)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 14),
-                      ),
-                    ),
-                ],
+                  child: const Icon(Icons.add, color: Colors.white, size: 14),
+                ),
               ),
-              title: Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-              subtitle: Text(
-                myStatuses.isNotEmpty 
-                    ? "${myStatuses.length} status${myStatuses.length > 1 ? 'es' : ''}"
-                    : "Tap to add status",
-                style: const TextStyle(color: Colors.grey),
-              ),
-              onTap: () {
-                if (myStatuses.isNotEmpty) {
-                  _viewStatuses(myStatuses, displayName, avatarUrl);
-                } else {
-                  _postStatus();
-                }
-              },
-              onLongPress: _postStatus,
+            ],
+          ),
+          title: Text(
+            "My Status",
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w600,
             ),
-          ],
+          ),
+          subtitle: Text(
+            myStatuses.isNotEmpty 
+                ? "${myStatuses.length} status${myStatuses.length > 1 ? 'es' : ''} • Tap to view"
+                : "Tap to add status update",
+            style: TextStyle(color: Theme.of(context).hintColor, fontSize: 13),
+          ),
+          onTap: () {
+            if (myStatuses.isNotEmpty) {
+              _viewStatuses(myStatuses, displayName, avatarUrl);
+            } else {
+              _postStatus();
+            }
+          },
         );
       },
     );
   }
 
-  Widget _buildFriendStatusSection(String friendId) {
+  Widget _buildFriendStatusSection(String friendId, bool isDark) {
     final friendName = _friendProfile?['display_name'] ?? "Friend";
-    final friendAvatar = _friendProfile?['avatar_url'] ?? "https://i.pravatar.cc/150?img=33";
+    final friendAvatar = _friendProfile?['avatar_url'] ?? "";
 
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: SupabaseService.getFriendStatus(friendId),
@@ -241,12 +237,18 @@ class _StatusListScreenState extends State<StatusListScreen> {
         final friendStatuses = snapshot.data ?? [];
         
         if (friendStatuses.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
+          return Padding(
+            padding: const EdgeInsets.all(32),
             child: Center(
-              child: Text(
-                "No friend statuses yet",
-                style: TextStyle(color: Colors.grey),
+              child: Column(
+                children: [
+                  Icon(Icons.photo_camera_outlined, size: 48, color: Theme.of(context).hintColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    "No status updates from $friendName",
+                    style: TextStyle(color: Theme.of(context).hintColor),
+                  ),
+                ],
               ),
             ),
           );
@@ -259,119 +261,146 @@ class _StatusListScreenState extends State<StatusListScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            // Section header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
-                "Friend's Status",
+                "RECENT UPDATES",
                 style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
+                  color: Theme.of(context).hintColor,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
+            
+            // Day groups
             ...orderedDays.map((dayLabel) {
               final statusesForDay = groupedStatuses[dayLabel]!;
+              final totalForDay = statusesForDay.length;
               
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Day Header
+                  // Day Header with status count
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    color: Colors.black12,
-                    child: Text(
-                      dayLabel,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    color: isDark 
+                        ? Colors.white.withOpacity(0.03) 
+                        : Colors.black.withOpacity(0.02),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            dayLabel,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "$totalForDay update${totalForDay > 1 ? 's' : ''}",
+                          style: TextStyle(
+                            color: Theme.of(context).hintColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   
-                  // Status items for this day
-                  ...statusesForDay.map((status) {
-                    final type = status['type'] ?? 'text';
-                    final contentText = status['content_text'] ?? '';
-                    final createdAt = status['created_at'];
-                    
-                    return ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.secondary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: AppColors.background,
-                            shape: BoxShape.circle,
-                          ),
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.grey[800],
-                            backgroundImage: friendAvatar.isNotEmpty 
-                                ? NetworkImage(friendAvatar) 
-                                : null,
-                            child: friendAvatar.isEmpty 
-                                ? const Icon(Icons.person, color: Colors.white) 
-                                : null,
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        friendName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Row(
-                        children: [
-                          Icon(
-                            type == 'image' 
-                                ? Icons.image 
-                                : type == 'video' 
-                                    ? Icons.videocam 
-                                    : Icons.text_fields,
-                            size: 14,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              type == 'text' 
-                                  ? (contentText.length > 30 
-                                      ? '${contentText.substring(0, 30)}...' 
-                                      : contentText)
-                                  : type == 'image' 
-                                      ? 'Photo' 
-                                      : 'Video',
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                  // Horizontal scroll of status thumbnails for this day
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      itemCount: statusesForDay.length,
+                      itemBuilder: (context, index) {
+                        final status = statusesForDay[index];
+                        final type = status['type'] ?? 'text';
+                        final contentUrl = status['content_url'];
+                        final contentText = status['content_text'] ?? '';
+                        final time = _formatTime(status['created_at']);
+                        
+                        return GestureDetector(
+                          onTap: () {
+                            // Start viewing from this status
+                            _viewStatuses(
+                              statusesForDay.sublist(index), 
+                              friendName, 
+                              friendAvatar,
+                            );
+                          },
+                          child: Container(
+                            width: 70,
+                            margin: const EdgeInsets.only(right: 12),
+                            child: Column(
+                              children: [
+                                // Thumbnail
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    gradient: type == 'text' 
+                                        ? AppColors.primaryGradient 
+                                        : null,
+                                    image: type == 'image' && contentUrl != null
+                                        ? DecorationImage(
+                                            image: NetworkImage(contentUrl),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                    color: type == 'video' ? Colors.grey[800] : null,
+                                    border: Border.all(
+                                      color: AppColors.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: type == 'video'
+                                      ? const Icon(Icons.play_circle, color: Colors.white)
+                                      : type == 'text'
+                                          ? Center(
+                                              child: Text(
+                                                contentText.length > 6 
+                                                    ? '${contentText.substring(0, 6)}...'
+                                                    : contentText,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            )
+                                          : null,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  time,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Theme.of(context).hintColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                      trailing: Text(
-                        _formatTime(createdAt),
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                      onTap: () {
-                        // View just this day's statuses or all statuses starting from this one
-                        _viewStatuses(statusesForDay, friendName, friendAvatar);
+                        );
                       },
-                    );
-                  }),
+                    ),
+                  ),
                 ],
               );
             }),

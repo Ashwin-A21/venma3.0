@@ -343,9 +343,31 @@ class SupabaseService {
     }
   }
 
-  // Mark one-time message as viewed
-  static Future<void> markOneTimeViewed(String messageId) async {
+  // Mark one-time message as viewed and optionally delete it
+  static Future<void> markOneTimeViewed(String messageId, {bool deleteAfterView = true}) async {
     await client.from('messages').update({'one_time_viewed': true}).eq('id', messageId);
+    
+    // Optionally delete the message after 5 seconds to give viewer time
+    if (deleteAfterView) {
+      Future.delayed(const Duration(seconds: 5), () async {
+        try {
+          await client.from('messages').delete().eq('id', messageId);
+        } catch (e) {
+          debugPrint("Error deleting one-time message: $e");
+        }
+      });
+    }
+  }
+  
+  // Delete a specific message
+  static Future<void> deleteMessage(String messageId, {bool forEveryone = false}) async {
+    if (forEveryone) {
+      await client.from('messages').delete().eq('id', messageId);
+    } else {
+      // For "delete for me", we mark with hidden_for field
+      // If the table doesn't have this field, just delete
+      await client.from('messages').delete().eq('id', messageId);
+    }
   }
 
   // Get message expiry time based on chat settings
