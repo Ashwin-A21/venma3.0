@@ -1,64 +1,46 @@
 import 'package:flutter/material.dart';
-import '../../core/extensions/color_extensions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
 class AppTheme {
-  // Light Theme Colors
-  static const Color _lightBackground = Color(0xFFF5F5F7);
-  static const Color _lightSurface = Color(0xFFFFFFFF);
-  static const Color _lightTextPrimary = Color(0xFF1A1A2E);
-  static const Color _lightTextSecondary = Color(0xFF6B7280);
-  
-  // Dark Theme Colors - Premium dark aesthetic
-  static const Color _darkBackground = Color(0xFF0A0A0F);
-  static const Color _darkSurface = Color(0xFF16161F);
-  static const Color _darkCard = Color(0xFF1E1E2D);
-  static const Color _darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color _darkTextSecondary = Color(0xFF9CA3AF);
-  
-  // Accent colors
-  static const Color accentPurple = Color(0xFF8B5CF6);
-  static const Color accentCyan = Color(0xFF06B6D4);
-  static const Color accentPink = Color(0xFFEC4899);
-
   static ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
-      scaffoldBackgroundColor: _lightBackground,
+      scaffoldBackgroundColor: AppColors.lightBackground,
       primaryColor: AppColors.primary,
-      cardColor: _lightSurface,
-      dividerColor: Colors.grey[200],
-      hintColor: _lightTextSecondary,
-      colorScheme: ColorScheme.light(
+      cardColor: AppColors.lightCard,
+      dividerColor: AppColors.lightDivider,
+      hintColor: AppColors.lightTextSecondary,
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        surface: _lightSurface,
-        background: _lightBackground,
-        onBackground: _lightTextPrimary,
-        onSurface: _lightTextPrimary,
-        tertiary: accentPurple,
+        surface: AppColors.lightSurface,
+        error: AppColors.error,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: AppColors.lightTextPrimary,
+        onError: Colors.white,
       ),
       textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme).copyWith(
-        displayLarge: GoogleFonts.outfit(color: _lightTextPrimary, fontWeight: FontWeight.bold),
-        displayMedium: GoogleFonts.outfit(color: _lightTextPrimary, fontWeight: FontWeight.bold),
-        headlineLarge: GoogleFonts.outfit(color: _lightTextPrimary, fontWeight: FontWeight.w600),
-        headlineMedium: GoogleFonts.outfit(color: _lightTextPrimary, fontWeight: FontWeight.w600),
-        titleLarge: GoogleFonts.outfit(color: _lightTextPrimary, fontWeight: FontWeight.w600),
-        titleMedium: GoogleFonts.outfit(color: _lightTextPrimary, fontWeight: FontWeight.w500),
-        bodyLarge: GoogleFonts.outfit(color: _lightTextPrimary),
-        bodyMedium: GoogleFonts.outfit(color: _lightTextSecondary),
-        bodySmall: GoogleFonts.outfit(color: _lightTextSecondary),
+        displayLarge: GoogleFonts.outfit(color: AppColors.lightTextPrimary, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.outfit(color: AppColors.lightTextPrimary, fontWeight: FontWeight.bold),
+        headlineLarge: GoogleFonts.outfit(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
+        headlineMedium: GoogleFonts.outfit(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
+        titleLarge: GoogleFonts.outfit(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
+        titleMedium: GoogleFonts.outfit(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w500),
+        bodyLarge: GoogleFonts.outfit(color: AppColors.lightTextPrimary),
+        bodyMedium: GoogleFonts.outfit(color: AppColors.lightTextSecondary),
+        bodySmall: GoogleFonts.outfit(color: AppColors.lightTextSecondary),
       ),
       useMaterial3: true,
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.lightSurface,
         elevation: 0,
-        centerTitle: true,
-        foregroundColor: _lightTextPrimary,
+        centerTitle: false,
+        foregroundColor: AppColors.lightTextPrimary,
         iconTheme: const IconThemeData(color: AppColors.primary),
         titleTextStyle: GoogleFonts.outfit(
-          color: _lightTextPrimary,
+          color: AppColors.lightTextPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
@@ -85,27 +67,27 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: _lightSurface,
+        fillColor: AppColors.lightSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        hintStyle: GoogleFonts.outfit(color: _lightTextSecondary),
+        hintStyle: GoogleFonts.outfit(color: AppColors.lightTextSecondary),
       ),
       cardTheme: CardThemeData(
-        color: _lightSurface,
+        color: AppColors.lightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: _lightSurface,
-        shape: const RoundedRectangleBorder(
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.lightSurface,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: _lightTextPrimary,
-        contentTextStyle: GoogleFonts.outfit(color: _lightSurface),
+        backgroundColor: AppColors.lightTextPrimary,
+        contentTextStyle: GoogleFonts.outfit(color: AppColors.lightSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
       ),
@@ -115,8 +97,8 @@ class AppTheme {
           return Colors.grey;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacityValue(0.3);
-          return Colors.grey.withOpacityValue(0.3);
+          if (states.contains(WidgetState.selected)) return AppColors.primary.withValues(alpha: 0.3);
+          return Colors.grey.withValues(alpha: 0.3);
         }),
       ),
     );
@@ -125,40 +107,41 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: _darkBackground,
+      scaffoldBackgroundColor: AppColors.darkBackground,
       primaryColor: AppColors.primary,
-      cardColor: _darkCard,
-      dividerColor: Colors.grey[800],
-      hintColor: _darkTextSecondary,
-      colorScheme: ColorScheme.dark(
+      cardColor: AppColors.darkCard,
+      dividerColor: AppColors.darkDivider,
+      hintColor: AppColors.darkTextSecondary,
+      colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
-        secondary: accentCyan,
-        surface: _darkSurface,
-        background: _darkBackground,
-        onBackground: _darkTextPrimary,
-        onSurface: _darkTextPrimary,
-        tertiary: accentPurple,
+        secondary: AppColors.secondary,
+        surface: AppColors.darkSurface,
+        error: AppColors.error,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: AppColors.darkTextPrimary,
+        onError: Colors.white,
       ),
       textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme).copyWith(
-        displayLarge: GoogleFonts.outfit(color: _darkTextPrimary, fontWeight: FontWeight.bold),
-        displayMedium: GoogleFonts.outfit(color: _darkTextPrimary, fontWeight: FontWeight.bold),
-        headlineLarge: GoogleFonts.outfit(color: _darkTextPrimary, fontWeight: FontWeight.w600),
-        headlineMedium: GoogleFonts.outfit(color: _darkTextPrimary, fontWeight: FontWeight.w600),
-        titleLarge: GoogleFonts.outfit(color: _darkTextPrimary, fontWeight: FontWeight.w600),
-        titleMedium: GoogleFonts.outfit(color: _darkTextPrimary, fontWeight: FontWeight.w500),
-        bodyLarge: GoogleFonts.outfit(color: _darkTextPrimary),
-        bodyMedium: GoogleFonts.outfit(color: _darkTextSecondary),
-        bodySmall: GoogleFonts.outfit(color: _darkTextSecondary),
+        displayLarge: GoogleFonts.outfit(color: AppColors.darkTextPrimary, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.outfit(color: AppColors.darkTextPrimary, fontWeight: FontWeight.bold),
+        headlineLarge: GoogleFonts.outfit(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+        headlineMedium: GoogleFonts.outfit(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+        titleLarge: GoogleFonts.outfit(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+        titleMedium: GoogleFonts.outfit(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w500),
+        bodyLarge: GoogleFonts.outfit(color: AppColors.darkTextPrimary),
+        bodyMedium: GoogleFonts.outfit(color: AppColors.darkTextSecondary),
+        bodySmall: GoogleFonts.outfit(color: AppColors.darkTextSecondary),
       ),
       useMaterial3: true,
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.darkSurface,
         elevation: 0,
-        centerTitle: true,
-        foregroundColor: _darkTextPrimary,
+        centerTitle: false,
+        foregroundColor: AppColors.darkTextPrimary,
         iconTheme: const IconThemeData(color: AppColors.primary),
         titleTextStyle: GoogleFonts.outfit(
-          color: _darkTextPrimary,
+          color: AppColors.darkTextPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
@@ -186,27 +169,27 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: _darkSurface,
+        fillColor: AppColors.darkSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        hintStyle: GoogleFonts.outfit(color: _darkTextSecondary),
+        hintStyle: GoogleFonts.outfit(color: AppColors.darkTextSecondary),
       ),
       cardTheme: CardThemeData(
-        color: _darkCard,
+        color: AppColors.darkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: _darkSurface,
-        shape: const RoundedRectangleBorder(
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.darkSurface,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: _darkCard,
-        contentTextStyle: GoogleFonts.outfit(color: _darkTextPrimary),
+        backgroundColor: AppColors.darkCard,
+        contentTextStyle: GoogleFonts.outfit(color: AppColors.darkTextPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
       ),
@@ -216,8 +199,8 @@ class AppTheme {
           return Colors.grey;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacityValue(0.3);
-          return Colors.grey.withOpacityValue(0.3);
+          if (states.contains(WidgetState.selected)) return AppColors.primary.withValues(alpha: 0.3);
+          return Colors.grey.withValues(alpha: 0.3);
         }),
       ),
     );
