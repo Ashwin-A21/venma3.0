@@ -8,7 +8,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/supabase_service.dart';
 import 'call_screen.dart';
@@ -27,15 +26,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   String? _friendshipId;
   Map<String, dynamic>? _friendProfile;
   
-  // Reply to message
-  Map<String, dynamic>? _replyingTo;
-  
   // Selected messages for multi-select
   final Set<String> _selectedMessageIds = {};
   bool _isSelecting = false;
-  
-  // Optimistic messages (shown immediately before server confirms)
-  final List<Map<String, dynamic>> _optimisticMessages = [];
   
   @override
   void initState() {
@@ -109,7 +102,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final myId = SupabaseService.currentUser?.id;
     final friendName = _friendProfile?['display_name'] ?? "Friend";
     final friendAvatar = _friendProfile?['avatar_url'] ?? "https://i.pravatar.cc/150?img=33";
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -127,37 +119,59 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           .from('messages')
                           .stream(primaryKey: ['id'])
                           .eq('friendship_id', _friendshipId!)
-                          .order('created_at')
-                          .map((maps) => maps),
+                          .order('created_at'),
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
+                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                           return const Center(child: CircularProgressIndicator());
                         }
                         
-                        // Combine server messages with optimistic messages
-                        final serverMessages = snapshot.data!
+                        if (snapshot.hasError) {
+                          return Center(child: Text("Error: ${snapshot.error}"));
+                        }
+                        
+                        final allMessages = snapshot.data ?? [];
+                        
+                        // Filter messages
+                        final messages = allMessages
                             .where((m) => _shouldShowMessage(m))
                             .toList();
                         
-                        // Remove optimistic messages that are now in server data
-                        final serverIds = serverMessages.map((m) => m['id']).toSet();
-                        _optimisticMessages.removeWhere((m) => serverIds.contains(m['id']));
+                        // Sort newest first for reversed list
+                        messages.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
                         
-                        final allMessages = [...serverMessages, ..._optimisticMessages];
-                        allMessages.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+                        if (messages.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.chat_bubble_outline, size: 64, color: Theme.of(context).hintColor),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No messages yet",
+                                  style: TextStyle(color: Theme.of(context).hintColor, fontSize: 16),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Say hi to $friendName!",
+                                  style: TextStyle(color: Theme.of(context).hintColor),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
                         
-                        // Group messages by date
-                        final groupedMessages = _groupMessagesByDate(allMessages);
+                        // Build grouped list with date headers
+                        final groupedItems = _buildGroupedMessages(messages);
                         
                         return ListView.builder(
                           controller: _scrollController,
                           reverse: true,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          itemCount: groupedMessages.length,
+                          itemCount: groupedItems.length,
                           itemBuilder: (context, index) {
-                            final item = groupedMessages[index];
+                            final item = groupedItems[index];
                             
-                            if (item['isDateHeader'] == true) {
+                            if (item['type'] == 'date_header') {
                               return _buildDateHeader(item['date'] as String);
                             }
                             
@@ -171,13 +185,32 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       },
                     ),
             ),
-            // Reply bar if replying
-            if (_replyingTo != null) _buildReplyBar(),
             _buildInputArea(),
           ],
         ),
       ),
     );
+  }
+
+  List<Map<String, dynamic>> _buildGroupedMessages(List<Map<String, dynamic>> messages) {
+    final List<Map<String, dynamic>> result = [];
+    String? currentDateStr;
+    
+    for (final msg in messages) {
+      final createdAt = DateTime.parse(msg['created_at']);
+      final dateStr = _formatDateHeader(createdAt);
+      
+      // Add message first (since list is reversed)
+      result.add({'type': 'message', 'message': msg});
+      
+      // Add date header if date changed
+      if (dateStr != currentDateStr) {
+        result.add({'type': 'date_header', 'date': dateStr});
+        currentDateStr = dateStr;
+      }
+    }
+    
+    return result;
   }
 
   AppBar _buildNormalAppBar(String friendName, String friendAvatar) {
@@ -243,32 +276,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           icon: const Icon(Icons.delete_outline),
           onPressed: _showDeleteOptions,
         ),
-        IconButton(
-          icon: const Icon(Icons.reply),
-          onPressed: _selectedMessageIds.length == 1 ? _replyToSelected : null,
-        ),
       ],
     );
-  }
-
-  List<Map<String, dynamic>> _groupMessagesByDate(List<Map<String, dynamic>> messages) {
-    final List<Map<String, dynamic>> result = [];
-    String? lastDateStr;
-    
-    // Messages are in reverse order (newest first)
-    for (int i = messages.length - 1; i >= 0; i--) {
-      final msg = messages[i];
-      final createdAt = DateTime.parse(msg['created_at']);
-      final dateStr = _formatDateHeader(createdAt);
-      
-      if (dateStr != lastDateStr) {
-        result.insert(0, {'isDateHeader': true, 'date': dateStr});
-        lastDateStr = dateStr;
-      }
-      result.insert(0, {'isDateHeader': false, 'message': msg});
-    }
-    
-    return result;
   }
 
   String _formatDateHeader(DateTime date) {
@@ -282,9 +291,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } else if (messageDate == yesterday) {
       return 'Yesterday';
     } else if (now.difference(date).inDays < 7) {
-      return DateFormat('EEEE').format(date); // "Monday", "Tuesday", etc.
+      return DateFormat('EEEE').format(date);
     } else {
-      return DateFormat('MMM d, yyyy').format(date); // "Dec 15, 2024"
+      return DateFormat('MMM d, yyyy').format(date);
     }
   }
 
@@ -322,8 +331,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final type = msg['type'] ?? 'text';
     final createdAt = DateTime.parse(msg['created_at']);
     final time = DateFormat('h:mm a').format(createdAt);
-    final isOptimistic = msg['_isOptimistic'] == true;
-    final replyTo = msg['reply_to_content'];
     
     Widget messageContent;
     
@@ -341,20 +348,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         messageContent = _buildNudgeMessage(isMe, time);
         break;
       default:
-        messageContent = _buildTextMessage(content, isMe, time, replyTo, isOptimistic);
+        messageContent = _buildTextMessage(content, isMe, time);
     }
     
     return GestureDetector(
       onLongPress: () => _onMessageLongPress(msg),
       onTap: _isSelecting ? () => _toggleMessageSelection(msg['id']) : null,
-      onHorizontalDragEnd: (details) {
-        // Swipe to reply
-        if (details.primaryVelocity != null && details.primaryVelocity!.abs() > 200) {
-          if ((isMe && details.primaryVelocity! > 0) || (!isMe && details.primaryVelocity! < 0)) {
-            _setReplyTo(msg);
-          }
-        }
-      },
       child: Container(
         color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
         child: Align(
@@ -362,12 +361,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           child: messageContent,
         ),
       ),
-    ).animate(
-      autoPlay: isOptimistic,
-    ).fadeIn(duration: 200.ms).slideY(begin: 0.2, end: 0);
+    );
   }
 
-  Widget _buildTextMessage(String content, bool isMe, String time, String? replyTo, bool isOptimistic) {
+  Widget _buildTextMessage(String content, bool isMe, String time) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
@@ -394,33 +391,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Reply preview if this is a reply
-          if (replyTo != null && replyTo.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border(
-                  left: BorderSide(
-                    color: isMe ? Colors.white70 : AppColors.primary,
-                    width: 3,
-                  ),
-                ),
-              ),
-              child: Text(
-                replyTo,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isMe ? Colors.white70 : Theme.of(context).hintColor,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
           Text(
             content, 
             style: TextStyle(
@@ -443,9 +415,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               if (isMe) ...[
                 const SizedBox(width: 4),
                 Icon(
-                  isOptimistic ? Icons.access_time : Icons.done_all,
+                  Icons.done_all,
                   size: 14,
-                  color: isOptimistic ? Colors.white54 : Colors.white70,
+                  color: Colors.white70,
                 ),
               ],
             ],
@@ -482,7 +454,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final isOneTime = msg['is_one_time'] == true;
     final isViewed = msg['one_time_viewed'] == true;
     
-    // If one-time message has been viewed, hide it
     if (isOneTime && isViewed && !isMe) {
       return const SizedBox.shrink();
     }
@@ -537,8 +508,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                         );
                       },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 150,
+                          width: 180,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.broken_image, size: 40),
+                        );
+                      },
                     ),
-              // Time overlay
               Positioned(
                 bottom: 6,
                 right: 6,
@@ -669,53 +647,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildReplyBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        border: Border(
-          top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _replyingTo!['sender_id'] == SupabaseService.currentUser?.id ? 'You' : 'Friend',
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-                Text(
-                  _replyingTo!['content'] ?? '',
-                  style: TextStyle(color: Theme.of(context).hintColor, fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 20),
-            onPressed: () => setState(() => _replyingTo = null),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInputArea() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -735,7 +666,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Attachment button
             IconButton(
               icon: Icon(
                 Icons.attach_file_rounded,
@@ -743,7 +673,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
               onPressed: _showAttachmentMenu,
             ),
-            // Message input field
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 120),
@@ -774,9 +703,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(width: 6),
-            // Send button
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: AppColors.primaryGradient,
                 shape: BoxShape.circle,
               ),
@@ -810,25 +738,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _setReplyTo(Map<String, dynamic> msg) {
-    HapticFeedback.lightImpact();
-    setState(() => _replyingTo = msg);
-  }
-
-  void _replyToSelected() {
-    if (_selectedMessageIds.length == 1) {
-      // Find the message
-      // For now, just clear selection - proper implementation would find the message
-      setState(() {
-        _isSelecting = false;
-        _selectedMessageIds.clear();
-      });
-    }
-  }
-
   void _showDeleteOptions() {
-    final isMyMessage = _selectedMessageIds.length == 1; // Simplified check
-    
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardColor,
@@ -870,13 +780,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Future<void> _deleteMessages({required bool forEveryone}) async {
     try {
       for (final id in _selectedMessageIds) {
-        if (forEveryone) {
-          await SupabaseService.client.from('messages').delete().eq('id', id);
-        } else {
-          // For "delete for me", we'd ideally have a separate field
-          // For now, just delete anyway (can be improved with a hidden_for column)
-          await SupabaseService.client.from('messages').delete().eq('id', id);
-        }
+        await SupabaseService.client.from('messages').delete().eq('id', id);
       }
       
       setState(() {
@@ -903,7 +807,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final expiresAt = DateTime.parse(msg['expires_at']);
       if (DateTime.now().isAfter(expiresAt)) return false;
     }
-    // Hide one-time viewed messages for receiver
     if (msg['is_one_time'] == true && 
         msg['one_time_viewed'] == true && 
         msg['sender_id'] != SupabaseService.currentUser?.id) {
@@ -918,7 +821,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     
     _controller.clear();
     
-    final friendshipId = _friendshipId ?? await SupabaseService.getActiveFriendshipId();
+    final friendshipId = _friendshipId;
     if (friendshipId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -928,53 +831,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return;
     }
     
-    if (_friendshipId == null && mounted) {
-      setState(() => _friendshipId = friendshipId);
-    }
-    
-    // Create optimistic message for instant display
-    final optimisticId = 'optimistic_${DateTime.now().millisecondsSinceEpoch}';
-    final optimisticMessage = {
-      'id': optimisticId,
-      'friendship_id': friendshipId,
-      'sender_id': SupabaseService.currentUser!.id,
-      'content': text,
-      'type': 'text',
-      'created_at': DateTime.now().toIso8601String(),
-      'reply_to_content': _replyingTo?['content'],
-      '_isOptimistic': true,
-    };
-    
-    setState(() {
-      _optimisticMessages.add(optimisticMessage);
-      _replyingTo = null;
-    });
-    
-    // Now send to server
-    _insertMessage(friendshipId, text, _replyingTo?['content']);
-  }
-  
-  Future<void> _insertMessage(String friendshipId, String text, String? replyToContent) async {
     try {
-      DateTime? expiresAt;
-      try {
-        expiresAt = await SupabaseService.getMessageExpiryTime(friendshipId);
-      } catch (_) {}
-      
       await SupabaseService.client.from('messages').insert({
         'friendship_id': friendshipId,
         'sender_id': SupabaseService.currentUser!.id,
         'content': text,
         'type': 'text',
-        'expires_at': expiresAt?.toIso8601String(),
-        'reply_to_content': replyToContent,
       });
     } catch (e) {
       debugPrint("Error sending message: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Failed to send: ${e.toString().split(':').last.trim()}"),
+            content: Text("Failed to send: ${e.toString()}"),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -1008,7 +877,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildAttachmentOption(Icons.camera_alt, 'Camera', Colors.pink, () => _pickMedia('image', false)),
+                _buildAttachmentOption(Icons.camera_alt, 'Camera', Colors.pink, () => _pickFromCamera()),
                 _buildAttachmentOption(Icons.visibility_off, 'View Once', Colors.teal, () => _pickMedia('image', true)),
               ],
             ),
@@ -1039,6 +908,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  Future<void> _pickFromCamera() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.camera);
+    
+    if (file != null && _friendshipId != null) {
+      try {
+        await SupabaseService.sendImageMessage(_friendshipId!, File(file.path));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
   }
 
   Future<void> _pickMedia(String type, bool isOneTime) async {
@@ -1089,7 +973,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _viewOneTimeMedia(String url, String type, String messageId) async {
-    // Mark as viewed immediately
     await SupabaseService.markOneTimeViewed(messageId);
     
     if (type == 'image') {
@@ -1149,22 +1032,32 @@ class _ChatSettingsSheetState extends State<_ChatSettingsSheet> {
   }
 
   Future<void> _loadSettings() async {
-    final settings = await SupabaseService.getChatSettings(widget.friendshipId);
-    if (settings != null && mounted) {
-      setState(() {
-        _disappearingMode = settings['disappearing_mode'] ?? 'off';
-        _customHours = settings['custom_duration_hours'] ?? 24;
-      });
+    try {
+      final settings = await SupabaseService.getChatSettings(widget.friendshipId);
+      if (settings != null && mounted) {
+        setState(() {
+          _disappearingMode = settings['disappearing_mode'] ?? 'off';
+          _customHours = settings['custom_duration_hours'] ?? 24;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading chat settings: $e");
     }
   }
 
   Future<void> _saveSettings() async {
-    await SupabaseService.updateChatSettings(
-      widget.friendshipId,
-      _disappearingMode,
-      customHours: _disappearingMode == 'custom' ? _customHours : null,
-    );
-    if (mounted) Navigator.pop(context);
+    try {
+      await SupabaseService.updateChatSettings(
+        widget.friendshipId,
+        _disappearingMode,
+        customHours: _disappearingMode == 'custom' ? _customHours : null,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   @override
@@ -1227,7 +1120,7 @@ class _FullImageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.transparent),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: Center(
         child: InteractiveViewer(
           child: Image.network(url),
@@ -1312,7 +1205,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.transparent),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: Center(
         child: _initialized
             ? AspectRatio(

@@ -446,39 +446,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
             isLocalUser: true,
           ),
         ),
-        // Center - Show "💕 Besties" or friend name
-        GestureDetector(
-          onTap: () {
-            if (widget.friendshipId != null) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(friendshipId: widget.friendshipId)));
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                  Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("💕 ", style: TextStyle(fontSize: 16)),
-                Text(
-                  _friendProfile?['display_name'] ?? "Venma",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
+        // Center - Show "Version 1" text
+        const Text(
+          "Version 1",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
           ),
         ),
         IconButton(
